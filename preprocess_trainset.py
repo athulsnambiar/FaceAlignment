@@ -26,8 +26,8 @@ def get_square(image,npa,square_size):
 
 	mask[y_pos:y_pos+height,x_pos:x_pos+width]=image[0:height,0:width]	
 	mask=cv2.resize(mask,(square_size,square_size),interpolation=cv2.INTER_AREA)
-	for point in npa:
-	        	cv2.circle(mask,(int(point[0]),int(point[1])),2,(0,0,255),-1)
+	#for point in npa:
+	#        	cv2.circle(mask,(int(point[0]),int(point[1])),2,(0,0,255),-1)
 	
 
 	return mask,npa 
@@ -39,6 +39,7 @@ oversize_factor = float(sys.argv[3])
 
 image_files = [f for f in listdir(image_folder_path) if f.endswith('.png')]
 
+pro_count=0
 for image_path in image_files:
 	#read pts file for the image
 	ptsfile = open(join(image_folder_path,image_path[:-4]+".pts"),'r')
@@ -61,19 +62,15 @@ for image_path in image_files:
 	npa[:,0] = npa[:,0]-x1;
 	npa[:,1] = npa[:,1]-y1;
 	roi_color = image[y1:y2,x1:x2]
-	#display image
+	#get same res image
 	processed_image,npa = get_square(roi_color,npa,500)
-	cv2.imshow('image',processed_image)
-	k=cv2.waitKey() & 0xff
+	pro_count += 1
+	cv2.imwrite(join(output_folder_path,str(image_path)+".png"), processed_image)
+	np.save(join(output_folder_path,str(image_path)+".npy"),npa)
 
-	if k==27:
-		cv2.imwrite(join(output_folder_path,str(image_path)+".png"), roi_color)
-		np.save(join(output_folder_path,str(image_path)+".npy"),npa)
-		print(colored('File '+image_path+' accepted','green'))
-	else:
-		print(colored('File '+image_path+' rejected','red'))
+	if pro_count%100==0:
+		print(colored('Processed '+str(pro_count)+' images','green'))
 
-cv2.destroyAllWindows()
 
 
 
