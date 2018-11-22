@@ -5,7 +5,7 @@ import cv2
 import scipy.spatial
 import math
 from typing import List
-
+from fern import Fern
 
 # move this to utilities.py
 # add normalization
@@ -143,7 +143,7 @@ class FernForest:
         for i in range(len(prediction)):
             rotation, scale = similarity_transform(current_prediction[i],
                                                    mean_shape)
-            prediction[i] = scale* prediction * rotation
+            prediction[i] = scale * prediction * rotation
         
         return prediction
 
@@ -167,18 +167,3 @@ class FernForest:
                                                mean_shape)
         prediction = scale * np.dot(prediction, rotation)
         return prediction
-        
-                                    
-            
-
-
-                
-                
-
-
-
-        
-        
-
-                            
-
