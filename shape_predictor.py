@@ -7,11 +7,13 @@ and remove this line
 
 import numpy as np
 from typing import List
+from forest import FernForest
+from utilities import normalize_shape, denormalize_shape
 # import sys
 
 
 # this function is not complete. normalize mean after getting images
-def compute_mean_shape(shapes: List[np.ndarray]) -> np.ndarray:
+def compute_mean_shape(shapes: List[np.ndarray], size) -> np.ndarray:
     """Compute mean shape."""
     mean_shape: np.ndarray = np.zeros(shapes[0].shape)
 
@@ -19,7 +21,7 @@ def compute_mean_shape(shapes: List[np.ndarray]) -> np.ndarray:
         mean_shape = mean_shape + i
 
     mean_shape = mean_shape / len(shapes)
-
+    mean_shape = normalize_shape(mean_shape, size)
     return mean_shape
 
 
@@ -70,7 +72,8 @@ class ShapePredictor:
                              "Matching Shape Array Length")
 
         self.mean_shape: np.ndarray = compute_mean_shape(true_shapes)
-        self.training_shapes: List[np.ndarray] = true_shapes
+        self.training_shapes: List[np.ndarray] = true_shapes.copy()
+        size = images[0].shape[0]
 
         sample_images: List[np.ndarray] = []
         sample_true_shape: List[np.ndarray] = []
@@ -83,28 +86,33 @@ class ShapePredictor:
                 while index == i:
                     index = np.random.randint(len(images))
 
-                sample_images.append(images[index])
-                sample_true_shape.append(true_shapes[index])
-                sample_error_shape.append(true_shapes[i])
+                sample_images.append(images[i])
+                sample_true_shape.append(true_shapes[i])
+                sample_error_shape.append(true_shapes[index])
         
         for i in range(self.num_stages):
             print("Training Stage ", i+1, "/", self.num_stages)
             # fern forest is not complete. add parameters
-            self.stages.append(FernForest())
+            self.stages.append(FernForest(i,
+                                          self.num_trees,
+                                          self.num_pixels,
+                                          self.tree_depth))
+
             corrections: List[np.ndarray] = self.stages[i].\
                                             train(sample_images,
-                                            sample_true_shape,
-                                            sample_error_shape,
-                                            self.mean_shape,
-                                            self.num_trees,
-                                            self.num_pixels,
-                                            self.tree_depth)
+                                                  sample_true_shape,
+                                                  sample_error_shape,
+                                                  self.mean_shape)
             #not complete. normalize corrections and sample errors
             for j in range(len(corrections)):
-                sample_error_shape[j] = corrections[j] + sample_error_shape[j]
+                temp = normalize_shape(sample_error_shape[j], size) + corrections[j]
+                sample_error_shape[j] = denormalize_shape(temp, size)
+
 
     def predict(self, image: np.ndarray):
+        
         avg_prediction: np.ndarray = np.zeros(self.training_shapes[0].shape)
+        size = image.shape[0]
 
         for i in range(self.oversampling):
             index = np.random.randint(len(self.training_shapes))
@@ -115,7 +123,9 @@ class ShapePredictor:
                 correction = self.stages[j].predict(image,
                                                     self.mean_shape,
                                                     predicted_shape)
-                predicted_shape = predicted_shape + correction
+                predicted_shape = normalize_shape(predicted_shape, size) + correction
+                predicted_shape = denormalize_shape(predicted_shape, size)
+            
             avg_prediction = avg_prediction + predicted_shape
         
         return avg_prediction / self.oversampling

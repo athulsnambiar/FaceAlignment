@@ -6,6 +6,7 @@ import scipy.spatial
 import math
 from typing import List
 from fern import Fern
+from utilities import normalize_shape, denormalize_shape
 
 # move this to utilities.py
 # add normalization
@@ -77,14 +78,18 @@ class FernForest:
               mean_shape: np.ndarray):
         """One Stage of Regressor"""
 
+        size = images[0].shape[0]
+
         error: List[np.ndarray] = []
         # not complete. normalization required.
         for i in range(current_prediction):
-            temp: np.ndarray = true_shapes[i] - current_prediction[i]
+            temp: np.ndarray = (normalize_shape(true_shapes[i], size) -
+                                normalize_shape(current_prediction[i], size))
 
             rotation, scale = similarity_transform(mean_shape,
-                                                   current_prediction)
+                                                   normalize_shape(current_prediction, size))
             # confusion here about the transpose of rotation matrix
+            rotation = rotation.T
             error.append(scale * np.dot(temp, rotation))
         
         # generate random points
@@ -107,21 +112,26 @@ class FernForest:
         # compute pixel intensities at pixel locations computed above
         # not complete normalization required
         # move to seperate function if possible
-        intensities: np.ndarray = np.empty((0, len(images)))
+        intensities: np.ndarray = np.empty((self.num_pixels, 0))
         for i in range(len(images)):
-            rotation, scale = similarity_transform(current_prediction[i],
-                                                   mean_shape)
-            temp: np.ndarray = np.empty((1, 0))
+            norm = normalize_shape(current_prediction[i], size)
+            rotation, scale = similarity_transform(norm, mean_shape)
+
+            temp: np.ndarray = np.empty((0, 1))
             for j in range(self.num_pixels):
                 point: np.ndarray = np.dot(test_pixels[j], rotation) * scale
+                point = point * size / 2
                 point = point + current_prediction[i][shape_index[j]]
-                point[point > images[i].shape[0]] = 0
+                
+                point[0, 0] = max(0, min(point[0, 0], size - 1))
+                point[0, 1] = max(0, min(point[0, 1], size - 1))
+                
                 point = np.reshape(point, (2))
-                temp = np.column_stack((temp,
+                temp = np.row_stack((temp,
                                         [
-                                            [images[i][point[0], point[1]]]
+                                            [images[i][point[1], point[0]]]
                                         ]))
-            intensities = np.row_stack((intensities, temp))
+            intensities = np.column_stack((intensities, temp))
         
         # compute covariance of intensities for better feature selection
         pixel_covar = np.cov(intensities, rowvar=True)
@@ -141,9 +151,10 @@ class FernForest:
                 error[j] = error[j] - temp[j]
         
         for i in range(len(prediction)):
-            rotation, scale = similarity_transform(current_prediction[i],
+            temp = normalize_shape(current_prediction[i], size)
+            rotation, scale = similarity_transform(temp,
                                                    mean_shape)
-            prediction[i] = scale * prediction * rotation
+            prediction[i] = scale * np.dot(prediction[i], rotation)
         
         return prediction
 
@@ -154,16 +165,18 @@ class FernForest:
                 current_prediction: np.ndarray):
         
         prediction: np.ndarray = np.zeros(current_prediction.shape)
-
-        rotation, scale = similarity_transform(current_prediction,
+        size = image.shape[0]
+        temp = normalize_shape(current_prediction, size)
+        rotation, scale = similarity_transform(temp,
                                                mean_shape)
         for i in range(self.num_trees):
             prediction = prediction + self.ferns[i].predict(image,
                                                             current_prediction,
                                                             rotation,
                                                             scale)
-
-        rotation, scale = similarity_transform(current_prediction,
+        temp = normalize_shape(current_prediction, size)
+        rotation, scale = similarity_transform(temp,
                                                mean_shape)
+        rotation = rotation.T
         prediction = scale * np.dot(prediction, rotation)
         return prediction

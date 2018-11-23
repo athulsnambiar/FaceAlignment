@@ -174,11 +174,3 @@ class Fern:
                 index = index + 2**i
         
         return self.bin_output[index]
-
-
-            
-
-            
-            
-            
-            
