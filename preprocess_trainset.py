@@ -4,7 +4,7 @@ import cv2
 from os import listdir
 from os.path import isfile, join
 import numpy as np
-from termcolor import colored
+# from termcolor import colored
 
 
 def get_square(image,npa,square_size):
@@ -69,7 +69,7 @@ for image_path in image_files:
 	np.save(join(output_folder_path,str(image_path)+".npy"),npa)
 
 	if pro_count%100==0:
-		print(colored('Processed '+str(pro_count)+' images','green'))
+		print('Processed '+str(pro_count)+' images')
 
 
 

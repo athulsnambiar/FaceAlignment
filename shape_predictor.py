@@ -71,7 +71,7 @@ class ShapePredictor:
             raise ValueError("Image Array Length Not"
                              "Matching Shape Array Length")
 
-        self.mean_shape: np.ndarray = compute_mean_shape(true_shapes)
+        self.mean_shape: np.ndarray = compute_mean_shape(true_shapes, images[0].shape[0])
         self.training_shapes: List[np.ndarray] = true_shapes.copy()
         size = images[0].shape[0]
 

@@ -29,13 +29,13 @@ class Fern:
 
         for i in range(self.tree_depth):
             random_direction: np.ndarray = np.random.rand(self.num_landmark, 2)*2.2 - 1.1
-            random_direction = cv2.normalize(random_direction)
+            random_direction = cv2.normalize(random_direction, None)
 
             projection: np.ndarray = np.zeros((len(errors)))
             for j in range(len(errors)):
                 projection[j] = np.sum(errors[j] * random_direction)
 
-            covar_proj: np.ndarray = np.zeros((len(errors)))
+            covar_proj: np.ndarray = np.zeros((num_pixels))
 
             for j in range(num_pixels):
                 # check here
@@ -90,8 +90,8 @@ class Fern:
                 if abs(temp) > max_diff:
                     max_diff = abs(temp)
             
-            self.threshold[i] = np.random.uniform(-0.2*max_diff,
-                                                  0.2*max_diff)
+            self.threshold.append(np.random.uniform(-0.2*max_diff,
+                                             0.2*max_diff))
         
         shapes_in_bins: List[List[int]] = []
         num_bins: int = 2**self.tree_depth
@@ -101,8 +101,8 @@ class Fern:
         for i in range(len(errors)):
             index: int = 0
             for j in range(self.tree_depth):
-                intensity1: float = intensities[self.selected_pixel_index[j,0], i]
-                intensity2: float = intensities[self.selected_pixel_index[j,1], i]
+                intensity1: float = intensities[int(self.selected_pixel_index[j,0]), i]
+                intensity2: float = intensities[int(self.selected_pixel_index[j,1]), i]
                 if intensity1 - intensity2 >= self.threshold[j]:
                     index = index + 2**j
             
@@ -125,11 +125,11 @@ class Fern:
                 temp = temp + errors[index]
             
             if bin_size == 0:
-                bin_output[i] = temp
+                self.bin_output[i] = temp
                 continue
             
             temp = (1/((1+ 1000/bin_size)*bin_size)) * temp
-            bin_output[i] = temp
+            self.bin_output[i] = temp
 
             for j in range(bin_size):
                 index: int = shapes_in_bins[i][j]
@@ -151,8 +151,8 @@ class Fern:
             x: float = self.selected_pixel_loc[i,0]
             y: float = self.selected_pixel_loc[i,1]
 
-            project_x: float = scale * (rotation[0, 0] * x + rotation[0, 1] * y) * size / 2 + shape[nearest_landmark_index_1, 0]
-            project_y: float = scale * (rotation[1, 0] * x + rotation[1, 1] * y) * size / 2 + shape[nearest_landmark_index_1, 1]
+            project_x: float = scale * (rotation[0, 0] * x + rotation[0, 1] * y) * size / 2 + shape[int(nearest_landmark_index_1), 0]
+            project_y: float = scale * (rotation[1, 0] * x + rotation[1, 1] * y) * size / 2 + shape[int(nearest_landmark_index_1), 1]
 
             project_x = max(0, min(project_x, size-1))
             project_y = max(0, min(project_y, size-1))
@@ -162,8 +162,8 @@ class Fern:
             x = self.selected_pixel_loc[i,2]
             y = self.selected_pixel_loc[i,3]
 
-            project_x = scale * (rotation[0, 0] * x + rotation[0, 1] * y) * size / 2 + shape[nearest_landmark_index_2, 0]
-            project_y = scale * (rotation[1, 0] * x + rotation[1, 1] * y) * size / 2 + shape[nearest_landmark_index_2, 1]
+            project_x = scale * (rotation[0, 0] * x + rotation[0, 1] * y) * size / 2 + shape[int(nearest_landmark_index_2), 0]
+            project_y = scale * (rotation[1, 0] * x + rotation[1, 1] * y) * size / 2 + shape[int(nearest_landmark_index_2), 1]
 
             project_x = max(0, min(project_x, size-1))
             project_y = max(0, min(project_y, size-1))

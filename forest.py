@@ -22,10 +22,8 @@ def similarity_transform(shape1: np.ndarray,
     mean_shifted_1: np.ndarray = shape1 - mean1
     mean_shifted_2: np.ndarray = shape2 - mean2
 
-    cov1: np.ndarray = cv2.calcCovarMatrix(mean_shifted_1, None,
-                                           cv2.COVAR_COLS)
-    cov2: np.ndarray = cv2.calcCovarMatrix(mean_shifted_2, None,
-                                           cv2.COVAR_COLS)
+    cov1 = np.cov(mean_shifted_1, rowvar=False)
+    cov2 = np.cov(mean_shifted_2, rowvar=False)
 
     s1: float = math.sqrt(np.linalg.norm(cov1))
     s2: float = math.sqrt(np.linalg.norm(cov2))
@@ -82,12 +80,12 @@ class FernForest:
 
         error: List[np.ndarray] = []
         # not complete. normalization required.
-        for i in range(current_prediction):
+        for i in range(len(current_prediction)):
             temp: np.ndarray = (normalize_shape(true_shapes[i], size) -
                                 normalize_shape(current_prediction[i], size))
 
             rotation, scale = similarity_transform(mean_shape,
-                                                   normalize_shape(current_prediction, size))
+                                                   normalize_shape(current_prediction[i], size))
             # confusion here about the transpose of rotation matrix
             rotation = rotation.T
             error.append(scale * np.dot(temp, rotation))
@@ -129,7 +127,7 @@ class FernForest:
                 point = np.reshape(point, (2))
                 temp = np.row_stack((temp,
                                         [
-                                            [images[i][point[1], point[0]]]
+                                            [images[i][int(point[1]), int(point[0])]]
                                         ]))
             intensities = np.column_stack((intensities, temp))
         
@@ -142,7 +140,7 @@ class FernForest:
 
         for i in range(self.num_trees):
             print("Training Stage: ", self.stage_index,
-                  " Fern: ", self.num_trees)
+                  " Fern: ", i)
             self.ferns.append(Fern(self.tree_depth))
             temp = self.ferns[i].train(intensities, pixel_covar, test_pixels,
                                        shape_index, error)
